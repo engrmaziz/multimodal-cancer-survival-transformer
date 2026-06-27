@@ -216,3 +216,17 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+
+data/
+*.svs
+*.parquet
+.env
+__pycache__/
+
+# .gitignore
+# Ignore raw and processed datasets
+backend/data/
+frontend/public/datasets/
+*.tsv
+*.csv
