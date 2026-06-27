@@ -9,7 +9,7 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
 
   // Strip trailing slashes from the API base address
-  const apiBase = 'https://reimagined-waddle-g4994j64jj6r3wqwp-8000.app.github.dev';
+  const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000';
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
