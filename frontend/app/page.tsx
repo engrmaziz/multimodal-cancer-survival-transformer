@@ -1,119 +1,100 @@
 // frontend/app/page.tsx
-"use client";
+'use client';
+import { useState } from 'react';
 
-import React, { useState } from 'react';
-
-export default function OncologyDashboard() {
-  const [stage, setStage] = useState<number>(2);
-  const [genomics, setGenomics] = useState<string>("0.2, -0.5, 1.1, 0.4");
+export default function Home() {
+  const [file, setFile] = useState<File | null>(null);
+  const [loading, setLoading] = useState(false);
   const [results, setResults] = useState<any>(null);
-  const [loading, setLoading] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const triggerInference = async () => {
+  // Strip trailing slashes from the API base address
+  const apiBase = 'https://reimagined-waddle-g4994j64jj6r3wqwp-8000.app.github.dev';
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      setFile(e.target.files[0]);
+      setError(null);
+    }
+  };
+
+  const handleUploadAndAnalyze = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!file) {
+      setError("Please select a raw genomics .tsv file first.");
+      return;
+    }
+
     setLoading(true);
+    setError(null);
+
+    // Prepare multi-part form data payload
+    const formData = new FormData();
+    formData.append("file", file);
+
     try {
-      const numericVectors = genomics.split(',').map(v => parseFloat(v.trim()));
-      
-      // Read the environment variable dynamically
-      const apiBase = 'https://reimagined-waddle-g4994j64jj6r3wqwp-8000.app.github.dev';
-      
-      const response = await fetch(`${apiBase}/api/predict-survival`, {
+      const response = await fetch(`${apiBase}/api/upload-genomics`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          clinical_stage: stage,
-          genomic_expression_vector: numericVectors
-        })
+        body: formData, // No headers needed, the browser sets multi-part boundaries automatically
       });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || "Server responded with an error.");
+      }
+
       const data = await response.json();
       setResults(data);
-    } catch (err) {
-      console.error("Inference execution failure:", err);
+    } catch (err: any) {
+      setError(err.message || "An unexpected error occurred connecting to the backend.");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <main className="p-8 max-w-5xl mx-auto space-y-6">
-      <div className="border-b pb-4">
-        <h1 className="text-3xl font-bold tracking-tight">Multimodal Cancer Survival Prognosis Panel</h1>
-        <p className="text-gray-500">Research Prototype for Deep Learning Cross-Attention Prediction Verification</p>
-      </div>
+    <main style={{ padding: '40px', maxWidth: '800px', margin: '0 auto', fontFamily: 'sans-serif' }}>
+      <h2>Multimodal Cancer Survival Prognosis Panel</h2>
+      <p style={{ color: '#666' }}>Research Prototype for Deep Learning Cross-Attention Prediction Verification</p>
+      
+      <form onSubmit={handleUploadAndAnalyze} style={{ border: '1px solid #ccc', padding: '20px', borderRadius: '8px', marginBottom: '20px' }}>
+        <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '10px' }}>
+          Upload Patient RNA-Seq Matrix (.tsv format):
+        </label>
+        <input 
+          type="file" 
+          accept=".tsv" 
+          onChange={handleFileChange} 
+          style={{ display: 'block', marginBottom: '20px' }}
+        />
+        
+        <button 
+          type="submit" 
+          disabled={loading}
+          style={{ padding: '10px 20px', cursor: 'pointer', background: '#000', color: '#fff', border: 'none', borderRadius: '4px' }}
+        >
+          {loading ? "Processing Bioinformatic Vectors..." : "Upload & Generate Survival Analysis"}
+        </button>
+      </form>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Controls Layout Wrapper */}
-        <div className="space-y-4 p-6 border rounded-xl bg-white shadow-sm">
-          <h2 className="text-xl font-semibold">Patient Clinical Variables</h2>
+      {error && <div style={{ color: 'red', marginBottom: '20px', fontWeight: 'bold' }}>⚠️ Error: {error}</div>}
+
+      {results && (
+        <div style={{ border: '1px solid #222', padding: '20px', borderRadius: '8px', background: '#fafafa' }}>
+          <h3>Prognostic Output Metrics</h3>
+          <p><strong>Analyzed File:</strong> {results.filename}</p>
+          <p><strong>Extracted Coding Genes:</strong> {results.features_extracted}</p>
+          <p><strong>Hazard Ratio:</strong> {results.hazard_ratio}</p>
+          <p><strong>Risk Classification:</strong> {results.risk_classification}</p>
           
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Pathological Cancer Stage</label>
-            <select 
-              value={stage} 
-              onChange={(e) => setStage(Number(e.target.value))}
-              className="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm bg-white"
-            >
-              <option value={1}>Stage I</option>
-              <option value={2}>Stage II</option>
-              <option value={3}>Stage III</option>
-              <option value={4}>Stage IV</option>
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Target Gene Markers Expression Matrix (Comma Separated)</label>
-            <input 
-              type="text" 
-              value={genomics} 
-              onChange={(e) => setGenomics(e.target.value)}
-              className="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm font-mono text-sm"
-            />
-          </div>
-
-          <button 
-            onClick={triggerInference}
-            disabled={loading}
-            className="w-full bg-slate-900 text-white p-3 rounded-lg font-medium hover:bg-slate-800 transition-colors disabled:bg-slate-400"
-          >
-            {loading ? "Computing Transformer Hazard Ratios..." : "Generate Survival Curve Analysis"}
-          </button>
+          <h4>Kaplan-Meier Survival Decay Vectors</h4>
+          <ul>
+            {Object.entries(results.survival_curve).map(([timeline, percentage]: any) => (
+              <li key={timeline}><strong>{timeline}:</strong> {percentage}</li>
+            ))}
+          </ul>
         </div>
-
-        {/* Results Metrics Block */}
-        <div className="p-6 border rounded-xl bg-slate-50 flex flex-col justify-between">
-          <h2 className="text-xl font-semibold mb-4">Prognostic Output Metrics</h2>
-          {results ? (
-            <div className="space-y-4 flex-1">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="bg-white p-4 rounded-lg border shadow-sm">
-                  <span className="text-xs text-gray-500 block uppercase font-bold tracking-wider">Hazard Ratio</span>
-                  <span className="text-2xl font-bold text-slate-800">{results.hazard_ratio}</span>
-                </div>
-                <div className="bg-white p-4 rounded-lg border shadow-sm">
-                  <span className="text-xs text-gray-500 block uppercase font-bold tracking-wider">Classification</span>
-                  <span className="text-lg font-bold text-slate-800">{results.risk_classification}</span>
-                </div>
-              </div>
-
-              <div className="bg-white p-4 rounded-lg border shadow-sm flex-1">
-                <span className="text-sm font-medium block mb-2 text-gray-700">Kaplan-Meier Survival Decay Vectors</span>
-                <div className="space-y-1 font-mono text-xs text-gray-600">
-                  {results.timeline_months?.map((m: number, idx: number) => (
-                    <div key={m} className="flex justify-between border-b pb-1">
-                      <span>Month {m}:</span>
-                      <span className="font-bold">{(results.survival_probabilities[idx] * 100).toFixed(1)}%</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          ) : (
-            <div className="text-gray-400 text-center py-12 border-2 border-dashed rounded-lg flex-1 flex items-center justify-center">
-              Awaiting model inputs to map risk timeline probability vector metrics.
-            </div>
-          )}
-        </div>
-      </div>
+      )}
     </main>
   );
 }

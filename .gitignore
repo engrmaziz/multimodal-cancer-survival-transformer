@@ -230,3 +230,10 @@ backend/data/
 frontend/public/datasets/
 *.tsv
 *.csv
+
+
+# Ignore raw clinical and genomic data
+backend/data/
+*.tsv
+*.csv
+!backend/multimodal_survival_weights.pth
